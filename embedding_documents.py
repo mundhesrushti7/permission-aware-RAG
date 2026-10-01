@@ -1,0 +1,21 @@
+from sentence_transformers import SentenceTransformer
+
+
+model = SentenceTransformer("all-MiniLM-L6-v2")
+
+
+chunks = [
+    "Employees must change their password every 90 days.",
+    "Passwords must contain at least 12 characters.",
+    "Two-factor authentication is required for administrative accounts.",
+]
+
+
+embeddings = model.encode(chunks)
+
+
+print("Number of chunks:", len(chunks))
+print("Embedding shape:", embeddings.shape)
+
+print("\nFirst embedding:")
+print(embeddings[0])
