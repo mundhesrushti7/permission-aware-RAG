@@ -1,19 +1,30 @@
-from transformers import pipeline
+from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 
 
-generator = pipeline(
-    "text-generation",
-    model="google/flan-t5-small",
-)
+MODEL_NAME = "google/flan-t5-small"
+
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+model = AutoModelForSeq2SeqLM.from_pretrained(MODEL_NAME)
 
 
 def generate_answer(prompt: str) -> str:
     """
     Generate an answer from a text prompt.
     """
-    result = generator(
+
+    inputs = tokenizer(
         prompt,
+        return_tensors="pt",
+    )
+
+    outputs = model.generate(
+        **inputs,
         max_new_tokens=100,
     )
 
-    return result[0]["generated_text"]
+    answer = tokenizer.decode(
+        outputs[0],
+        skip_special_tokens=True,
+    )
+
+    return answer

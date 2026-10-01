@@ -16,3 +16,4 @@ def test_generate_answer():
 
     assert isinstance(answer, str)
     assert len(answer) > 0
+    assert "90" in answer
