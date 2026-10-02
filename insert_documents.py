@@ -13,29 +13,40 @@ documents = [
     {
         "text": "Employees must change their password every 90 days.",
         "tenant_id": "tenant_a",
+        "allowed_users": [],
+        "allowed_roles": ["employee"],
     },
     {
         "text": "Passwords must contain at least 12 characters.",
         "tenant_id": "tenant_a",
+        "allowed_users": [],
+        "allowed_roles": ["employee"],
     },
     {
         "text": "Two-factor authentication is required for administrative accounts.",
         "tenant_id": "tenant_a",
+        "allowed_users": [],
+        "allowed_roles": ["admin"],
     },
     {
         "text": "Employees receive their salary on the last working day of the month.",
         "tenant_id": "tenant_b",
+        "allowed_users": [],
+        "allowed_roles": ["hr"],
     },
     {
         "text": "Employees are entitled to 20 days of annual leave.",
         "tenant_id": "tenant_b",
+        "allowed_users": [],
+        "allowed_roles": ["employee"],
     },
     {
         "text": "Health benefits are available to full-time employees.",
         "tenant_id": "tenant_b",
+        "allowed_users": [],
+        "allowed_roles": ["employee"],
     },
 ]
-
 
 texts = [document["text"] for document in documents]
 
@@ -51,10 +62,12 @@ for index, (document, vector) in enumerate(
         id=index,
         vector=vector.tolist(),
         payload={
-            "text": document["text"],
-            "document_id": f"policy_{index}",
-            "tenant_id": document["tenant_id"],
-        },
+        "text": document["text"],
+        "document_id": f"policy_{index}",
+        "tenant_id": document["tenant_id"],
+        "allowed_users": document["allowed_users"],
+        "allowed_roles": document["allowed_roles"], 
+    },
     )
 
     points.append(point)

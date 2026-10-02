@@ -1,6 +1,11 @@
 from qdrant_client import QdrantClient
-from qdrant_client.models import FieldCondition, Filter, MatchValue
-from src.auth.acl import is_tenant_allowed
+from qdrant_client.models import (
+    FieldCondition,
+    Filter,
+    MatchAny,
+    MatchValue,
+)
+from src.auth.acl import is_document_allowed
 from src.embeddings.embedder import embed_texts
 from src.generation.generator import generate_answer
 
@@ -12,7 +17,9 @@ client = QdrantClient(
 
 def retrieve_documents(
     question: str,
+    user_id: str,
     tenant_id: str,
+    user_roles: list[str],
     limit: int = 3,
 ):
     """
@@ -22,14 +29,28 @@ def retrieve_documents(
     question_embedding = embed_texts([question])[0]
 
     query_filter = Filter(
-        must=[
-            FieldCondition(
-                key="tenant_id",
-                match=MatchValue(
-                    value=tenant_id,
+    must=[
+        FieldCondition(
+            key="tenant_id",
+            match=MatchValue(
+                value=tenant_id,
+            ),
+        )
+    ],
+    should=[
+        FieldCondition(
+            key="allowed_users",
+            match=MatchAny(
+                any=[user_id],
+            ),
+        ),
+        FieldCondition(
+            key="allowed_roles",
+            match=MatchAny(
+                any=user_roles,
                 ),
-            )
-        ]
+            ),
+        ],
     )
 
     results = client.query_points(
@@ -42,11 +63,13 @@ def retrieve_documents(
     authorized_results = []
 
     for result in results.points:
-        document_tenant_id = result.payload["tenant_id"]
+        document = result.payload
 
-        if is_tenant_allowed(
-            document_tenant_id,
-            tenant_id,
+        if is_document_allowed(
+            document,
+            user_id=user_id,
+            user_tenant_id=tenant_id,
+            user_roles=user_roles,
         ):
             authorized_results.append(result)
 
@@ -55,7 +78,9 @@ def retrieve_documents(
 
 def answer_question(
     question: str,
+    user_id: str,
     tenant_id: str,
+    user_roles: list[str],
 ) -> str:
     """
     Retrieve relevant context and generate an answer.
@@ -63,7 +88,9 @@ def answer_question(
 
     results = retrieve_documents(
         question,
-        tenant_id,
+        user_id=user_id,
+        tenant_id=tenant_id,
+        user_roles=user_roles,
     )
 
     retrieved_texts = []
