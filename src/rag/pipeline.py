@@ -5,6 +5,7 @@ from qdrant_client.models import (
     MatchAny,
     MatchValue,
 )
+from src.audit.audit_logger import log_retrieval
 from src.auth.acl import is_document_allowed
 from src.embeddings.embedder import embed_texts
 from src.generation.generator import generate_answer
@@ -73,6 +74,18 @@ def retrieve_documents(
         ):
             authorized_results.append(result)
 
+    returned_document_ids = [
+        result.payload["document_id"]
+        for result in authorized_results
+    ]
+
+    log_retrieval(
+        user_id=user_id,
+        tenant_id=tenant_id,
+        query=question,
+        returned_document_ids=returned_document_ids,
+        model="rag-model",
+    )
     return authorized_results
 
 
