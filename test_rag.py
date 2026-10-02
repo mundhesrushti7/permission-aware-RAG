@@ -1,5 +1,5 @@
 from src.rag.pipeline import answer_question
-
+from src.rag.pipeline import answer_question, retrieve_documents
 
 def test_answer_question():
     question = "How often should I change my password?"
@@ -23,3 +23,22 @@ def test_tenant_isolation():
     )
 
     assert "last working day" not in answer.lower()
+
+
+def test_retrieved_documents_are_tenant_isolated():
+    question = "When do employees receive their salary?"
+
+    results = retrieve_documents(
+        question,
+        tenant_id="tenant_a",
+    )
+
+    retrieved_tenant_ids = [
+        result.payload["tenant_id"]
+        for result in results
+    ]
+
+    assert all(
+        tenant_id == "tenant_a"
+        for tenant_id in retrieved_tenant_ids
+    )
