@@ -10,18 +10,40 @@ client = QdrantClient(
 
 
 documents = [
-    "Employees must change their password every 90 days.",
-    "Passwords must contain at least 12 characters.",
-    "Two-factor authentication is required for administrative accounts.",
+    {
+        "text": "Employees must change their password every 90 days.",
+        "tenant_id": "tenant_a",
+    },
+    {
+        "text": "Passwords must contain at least 12 characters.",
+        "tenant_id": "tenant_a",
+    },
+    {
+        "text": "Two-factor authentication is required for administrative accounts.",
+        "tenant_id": "tenant_a",
+    },
+    {
+        "text": "Employees receive their salary on the last working day of the month.",
+        "tenant_id": "tenant_b",
+    },
+    {
+        "text": "Employees are entitled to 20 days of annual leave.",
+        "tenant_id": "tenant_b",
+    },
+    {
+        "text": "Health benefits are available to full-time employees.",
+        "tenant_id": "tenant_b",
+    },
 ]
 
 
-embeddings = embed_texts(documents)
+texts = [document["text"] for document in documents]
 
+embeddings = embed_texts(texts)
 
 points = []
 
-for index, (text, vector) in enumerate(
+for index, (document, vector) in enumerate(
     zip(documents, embeddings),
     start=1,
 ):
@@ -29,9 +51,9 @@ for index, (text, vector) in enumerate(
         id=index,
         vector=vector.tolist(),
         payload={
-            "text": text,
+            "text": document["text"],
             "document_id": f"policy_{index}",
-            "tenant_id": "tenant_a",
+            "tenant_id": document["tenant_id"],
         },
     )
 
