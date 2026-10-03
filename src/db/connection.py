@@ -1,13 +1,6 @@
 import psycopg
 
-
-DATABASE_URL = (
-    "host=localhost "
-    "port=5432 "
-    "dbname=rag_db "
-    "user=rag_user "
-    "password=rag_password"
-)
+from src.config import DATABASE_URL
 
 
 def get_connection():
