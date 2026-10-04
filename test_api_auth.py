@@ -1,9 +1,9 @@
-from fastapi.testclient import TestClient
 from datetime import datetime, timedelta, timezone
+from unittest.mock import patch
 
 import jwt
+from fastapi.testclient import TestClient
 
-from src.config import JWT_SECRET_KEY
 from src.api.main import app
 from src.auth.identity import (
     assign_role_to_user,
@@ -12,6 +12,7 @@ from src.auth.identity import (
     create_user,
 )
 from src.auth.jwt import decode_token
+from src.config import JWT_SECRET_KEY
 from src.db.connection import get_connection
 
 
@@ -201,3 +202,52 @@ def test_me_rejects_expired_token():
 
     assert response.status_code == 401
     assert response.json()["detail"] == "Invalid or expired token"
+
+
+def test_query_uses_authenticated_user_context():
+    setup_test_user()
+
+    try:
+        login_response = client.post(
+            "/login",
+            json={
+                "username": TEST_USERNAME,
+                "password": TEST_PASSWORD,
+            },
+        )
+
+        assert login_response.status_code == 200
+
+        access_token = login_response.json()["access_token"]
+
+        with patch(
+            "src.api.main.answer_question",
+            return_value="Mocked answer",
+        ) as mock_answer_question:
+            response = client.post(
+                "/query",
+                headers={"Authorization": f"Bearer {access_token}"},
+                json={"question": "How do I change my password?"},
+            )
+
+        assert response.status_code == 200
+        assert response.json() == {"answer": "Mocked answer"}
+
+        mock_answer_question.assert_called_once_with(
+            question="How do I change my password?",
+            user_id=TEST_USER_ID,
+            tenant_id=TEST_TENANT_ID,
+            user_roles=["employee"],
+        )
+
+    finally:
+        cleanup_test_user()
+
+
+def test_query_rejects_missing_token():
+    response = client.post(
+        "/query",
+        json={"question": "How do I change my password?"},
+    )
+
+    assert response.status_code == 401
