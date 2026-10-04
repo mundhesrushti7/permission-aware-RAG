@@ -38,6 +38,9 @@ client = QdrantClient(
 )
 
 
+from src.auth.permissions import revoke_user_access
+
+
 def test_permission_revoke_blocks_user_at_retrieval_layer():
     original_payload = {
         "allowed_users": [],
@@ -68,13 +71,13 @@ def test_permission_revoke_blocks_user_at_retrieval_layer():
 
         assert "policy_3" in document_ids_before_revoke
 
-        # Revoke the user's direct access.
-        client.set_payload(
-            collection_name="documents",
-            payload={
-                "allowed_users": [],
-            },
-            points=[3],
+        # Revoke the user's access through the application permission service.
+        revoke_user_access(
+            document_id="policy_3",
+            target_user_id="user_123",
+            actor_user_id="admin_1",
+            actor_tenant_id="tenant_a",
+            actor_roles=["admin"],
         )
 
         results_after_revoke = retrieve_documents(
