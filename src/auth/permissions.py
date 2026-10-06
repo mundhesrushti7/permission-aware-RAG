@@ -1,6 +1,6 @@
 from qdrant_client import QdrantClient
 from qdrant_client.models import FieldCondition, Filter, MatchValue
-
+from src.audit.permission_audit_logger import log_permission_change
 
 client = QdrantClient(
     url="http://localhost:6333"
@@ -67,4 +67,13 @@ def revoke_user_access(
             "allowed_users": updated_allowed_users,
         },
         points=[records[0].id],
+    )
+
+
+    log_permission_change(
+        actor_user_id=actor_user_id,
+        tenant_id=actor_tenant_id,
+        document_id=document_id,
+        target_user_id=target_user_id,
+        action="revoke_user_access",
     )
