@@ -1,7 +1,14 @@
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException, status
 
 from src.api.auth import get_current_user, login_user
-from src.api.models import LoginRequest, LoginResponse, QueryRequest, QueryResponse
+from src.api.models import (
+    LoginRequest,
+    LoginResponse,
+    QueryRequest,
+    QueryResponse,
+    RevokePermissionRequest,
+)
+from src.auth.permissions import revoke_user_access
 from src.rag.pipeline import answer_question
 
 
@@ -43,3 +50,37 @@ def query(
     )
 
     return QueryResponse(answer=answer)
+
+
+@app.post("/documents/{document_id}/permissions/revoke")
+def revoke_permission(
+    document_id: str,
+    request: RevokePermissionRequest,
+    current_user: dict = Depends(get_current_user),
+):
+    """Revoke a user's access to a document."""
+
+    try:
+        revoke_user_access(
+            document_id=document_id,
+            target_user_id=request.target_user_id,
+            actor_user_id=current_user["user_id"],
+            actor_tenant_id=current_user["tenant_id"],
+            actor_roles=current_user["roles"],
+        )
+    except PermissionError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=str(exc),
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=str(exc),
+        )
+
+    return {
+        "message": "User access revoked successfully.",
+        "document_id": document_id,
+        "target_user_id": request.target_user_id,
+    }

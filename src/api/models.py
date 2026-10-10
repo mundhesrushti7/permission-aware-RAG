@@ -17,3 +17,7 @@ class QueryRequest(BaseModel):
 
 class QueryResponse(BaseModel):
     answer: str
+
+
+class RevokePermissionRequest(BaseModel):
+    target_user_id: str

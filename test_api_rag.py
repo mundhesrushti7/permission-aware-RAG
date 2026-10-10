@@ -19,15 +19,18 @@ TEST_USERNAME = "rag_api_test_user"
 TEST_PASSWORD = "CorrectPassword123!"
 
 
+
 def setup_test_user():
-    create_tenant(TEST_TENANT_ID, "Tenant A")
+    # tenant_a already exists, so reuse it.
     create_role(TEST_ROLE_ID, "employee")
+
     create_user(
         TEST_USER_ID,
         TEST_USERNAME,
         TEST_PASSWORD,
         TEST_TENANT_ID,
     )
+
     assign_role_to_user(TEST_USER_ID, TEST_ROLE_ID)
 
 
@@ -40,18 +43,19 @@ def cleanup_test_user():
                 "DELETE FROM user_roles WHERE user_id = %s",
                 (TEST_USER_ID,),
             )
+
             cursor.execute(
                 "DELETE FROM users WHERE id = %s",
                 (TEST_USER_ID,),
             )
+
             cursor.execute(
                 "DELETE FROM roles WHERE id = %s",
                 (TEST_ROLE_ID,),
             )
-            cursor.execute(
-                "DELETE FROM tenants WHERE id = %s",
-                (TEST_TENANT_ID,),
-            )
+
+            # Do NOT delete TEST_TENANT_ID.
+            # tenant_a is shared by existing RAG documents and tests.
 
         conn.commit()
 
