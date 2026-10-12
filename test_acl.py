@@ -92,3 +92,46 @@ def test_matching_role_cannot_cross_tenant():
         user_tenant_id="tenant_a",
         user_roles=["employee"],
     )
+
+
+
+def test_document_without_tenant_is_rejected():
+    document = {
+        "allowed_users": ["user_123"],
+        "allowed_roles": ["employee"],
+    }
+
+    assert not is_document_allowed(
+        document,
+        user_id="user_123",
+        user_tenant_id="tenant_a",
+        user_roles=["employee"],
+    )
+
+
+def test_document_with_missing_permission_lists_is_rejected():
+    document = {
+        "tenant_id": "tenant_a",
+    }
+
+    assert not is_document_allowed(
+        document,
+        user_id="user_123",
+        user_tenant_id="tenant_a",
+        user_roles=["employee"],
+    )
+
+
+def test_document_with_malformed_permission_lists_is_rejected():
+    document = {
+        "tenant_id": "tenant_a",
+        "allowed_users": None,
+        "allowed_roles": None,
+    }
+
+    assert not is_document_allowed(
+        document,
+        user_id="user_123",
+        user_tenant_id="tenant_a",
+        user_roles=["employee"],
+    )
