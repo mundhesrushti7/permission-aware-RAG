@@ -1,7 +1,7 @@
 import pytest
 
 from src.auth.jwt import create_token, decode_token
-
+from src.config import JWT_SECRET_KEY
 from datetime import datetime, timedelta, timezone
 
 
@@ -66,7 +66,7 @@ def test_expired_token_is_rejected():
 
     expired_token = jwt.encode(
         expired_payload,
-        "development-secret-key-1234567890",
+        JWT_SECRET_KEY,
         algorithm="HS256",
     )
 

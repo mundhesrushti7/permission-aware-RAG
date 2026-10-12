@@ -36,22 +36,64 @@ TEST_TARGET_USER_ID = EMPLOYEE_A_ID
 
 
 
+
 def setup_test_users():
-    # Reuse tenant_a because it already exists in the database.
+    global ADMIN_ROLE_ID, EMPLOYEE_ROLE_ID
+    # Remove leftovers from an interrupted previous run.
+    cleanup_test_users()
+
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            # Create tenant_a only if it does not already exist.
+            cursor.execute(
+                """
+                INSERT INTO tenants (id, name)
+                VALUES (%s, %s)
+                ON CONFLICT (id) DO NOTHING
+                """,
+                (TEST_TENANT_A, "Tenant A"),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
     create_tenant(
         TEST_TENANT_B,
         "API Permission Test Tenant B",
     )
 
-    create_role(
-        ADMIN_ROLE_ID,
-        "admin",
-    )
+    # Reuse globally unique role names if they already exist.
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "SELECT id FROM roles WHERE name = %s",
+                ("admin",),
+            )
+            admin_row = cursor.fetchone()
 
-    create_role(
-        EMPLOYEE_ROLE_ID,
-        "employee",
-    )
+            cursor.execute(
+                "SELECT id FROM roles WHERE name = %s",
+                ("employee",),
+            )
+            employee_row = cursor.fetchone()
+
+        conn.commit()
+    finally:
+        conn.close()
+
+    if admin_row is None:
+        create_role(ADMIN_ROLE_ID, "admin")
+    else:
+        
+        ADMIN_ROLE_ID = admin_row[0]
+
+    if employee_row is None:
+        create_role(EMPLOYEE_ROLE_ID, "employee")
+    else:
+        
+        EMPLOYEE_ROLE_ID = employee_row[0]
 
     create_user(
         ADMIN_A_ID,
@@ -74,52 +116,35 @@ def setup_test_users():
         TEST_TENANT_B,
     )
 
-    assign_role_to_user(
-        ADMIN_A_ID,
-        ADMIN_ROLE_ID,
-    )
-
-    assign_role_to_user(
-        EMPLOYEE_A_ID,
-        EMPLOYEE_ROLE_ID,
-    )
-
-    assign_role_to_user(
-        ADMIN_B_ID,
-        ADMIN_ROLE_ID,
-    )
-
+    assign_role_to_user(ADMIN_A_ID, ADMIN_ROLE_ID)
+    assign_role_to_user(EMPLOYEE_A_ID, EMPLOYEE_ROLE_ID)
+    assign_role_to_user(ADMIN_B_ID, ADMIN_ROLE_ID)
 
 
 def cleanup_test_users():
     conn = get_connection()
-
     try:
         with conn.cursor() as cursor:
             cursor.execute(
-                "DELETE FROM user_roles WHERE user_id IN (%s, %s, %s)",
-                (
-                    ADMIN_A_ID,
-                    EMPLOYEE_A_ID,
-                    ADMIN_B_ID,
-                ),
+                """
+                DELETE FROM user_roles
+                WHERE user_id IN (%s, %s, %s)
+                """,
+                (ADMIN_A_ID, EMPLOYEE_A_ID, ADMIN_B_ID),
             )
 
             cursor.execute(
-                "DELETE FROM users WHERE id IN (%s, %s, %s)",
-                (
-                    ADMIN_A_ID,
-                    EMPLOYEE_A_ID,
-                    ADMIN_B_ID,
-                ),
+                """
+                DELETE FROM users
+                WHERE id IN (%s, %s, %s)
+                """,
+                (ADMIN_A_ID, EMPLOYEE_A_ID, ADMIN_B_ID),
             )
 
+            # Delete only the test-specific role IDs.
             cursor.execute(
                 "DELETE FROM roles WHERE id IN (%s, %s)",
-                (
-                    ADMIN_ROLE_ID,
-                    EMPLOYEE_ROLE_ID,
-                ),
+                (ADMIN_ROLE_ID, EMPLOYEE_ROLE_ID),
             )
 
             cursor.execute(
@@ -128,9 +153,9 @@ def cleanup_test_users():
             )
 
         conn.commit()
-
     finally:
         conn.close()
+
 
 
 def get_test_document():
