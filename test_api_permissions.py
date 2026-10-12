@@ -142,8 +142,18 @@ def cleanup_test_users():
             )
 
             # Delete only the test-specific role IDs.
+            # Shared roles may be assigned to demo users, so do not delete them.
+            # Delete a role only if no users reference it.
             cursor.execute(
-                "DELETE FROM roles WHERE id IN (%s, %s)",
+            """
+                DELETE FROM roles
+                WHERE id IN (%s, %s)
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM user_roles
+                        WHERE user_roles.role_id = roles.id
+                    )
+                """,
                 (ADMIN_ROLE_ID, EMPLOYEE_ROLE_ID),
             )
 

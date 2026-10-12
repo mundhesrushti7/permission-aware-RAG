@@ -26,16 +26,68 @@ TEST_USERNAME = "api_auth_user"
 TEST_PASSWORD = "CorrectPassword123!"
 
 
+
 def setup_test_user():
-    create_tenant(TEST_TENANT_ID, "API Auth Test Tenant")
-    create_role(TEST_ROLE_ID, "employee")
-    create_user(
-        TEST_USER_ID,
-        TEST_USERNAME,
-        TEST_PASSWORD,
-        TEST_TENANT_ID,
-    )
-    assign_role_to_user(TEST_USER_ID, TEST_ROLE_ID)
+    conn = get_connection()
+
+    try:
+        with conn.cursor() as cursor:
+            # Remove only this test's stale user and role assignment.
+            cursor.execute(
+                "DELETE FROM user_roles WHERE user_id = %s",
+                (TEST_USER_ID,),
+            )
+            cursor.execute(
+                "DELETE FROM users WHERE id = %s",
+                (TEST_USER_ID,),
+            )
+
+            # Reuse the shared employee role if one exists.
+            cursor.execute(
+                "SELECT id FROM roles WHERE name = %s",
+                ("employee",),
+            )
+            row = cursor.fetchone()
+
+            if row is None:
+                cursor.execute(
+                    """
+                    INSERT INTO roles (id, name)
+                    VALUES (%s, %s)
+                    ON CONFLICT (name) DO NOTHING
+                    """,
+                    (TEST_ROLE_ID, "employee"),
+                )
+                cursor.execute(
+                    "SELECT id FROM roles WHERE name = %s",
+                    ("employee",),
+                )
+                row = cursor.fetchone()
+
+            employee_role_id = row[0]
+
+            # Reuse this test's tenant if it already exists.
+            cursor.execute(
+                """
+                INSERT INTO tenants (id, name)
+                VALUES (%s, %s)
+                ON CONFLICT (id) DO NOTHING
+                """,
+                (TEST_TENANT_ID, "API Auth Test Tenant"),
+            )
+
+        conn.commit()
+
+        create_user(
+            TEST_USER_ID,
+            TEST_USERNAME,
+            TEST_PASSWORD,
+            TEST_TENANT_ID,
+        )
+        assign_role_to_user(TEST_USER_ID, employee_role_id)
+
+    finally:
+        conn.close()
 
 
 def cleanup_test_user():
@@ -51,15 +103,7 @@ def cleanup_test_user():
                 "DELETE FROM users WHERE id = %s",
                 (TEST_USER_ID,),
             )
-            cursor.execute(
-                "DELETE FROM roles WHERE id = %s",
-                (TEST_ROLE_ID,),
-            )
-            cursor.execute(
-                "DELETE FROM tenants WHERE id = %s",
-                (TEST_TENANT_ID,),
-            )
-
+            # Keep the shared employee role and tenant.
         conn.commit()
     finally:
         conn.close()

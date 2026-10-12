@@ -21,8 +21,22 @@ TEST_PASSWORD = "CorrectPassword123!"
 
 
 def setup_test_user():
-    # tenant_a already exists, so reuse it.
-    create_role(TEST_ROLE_ID, "employee")
+    # tenant_a and the employee role already exist, so reuse them.
+    conn = get_connection()
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "SELECT id FROM roles WHERE name = %s",
+                ("employee",),
+            )
+            role_row = cursor.fetchone()
+
+        if role_row is None:
+            raise RuntimeError("The employee role does not exist.")
+
+        role_id = role_row[0]
+    finally:
+        conn.close()
 
     create_user(
         TEST_USER_ID,
@@ -30,8 +44,8 @@ def setup_test_user():
         TEST_PASSWORD,
         TEST_TENANT_ID,
     )
-
-    assign_role_to_user(TEST_USER_ID, TEST_ROLE_ID)
+    
+    assign_role_to_user(TEST_USER_ID, role_id)
 
 
 def cleanup_test_user():
@@ -39,28 +53,25 @@ def cleanup_test_user():
 
     try:
         with conn.cursor() as cursor:
+            # First remove the test user's role assignment.
             cursor.execute(
                 "DELETE FROM user_roles WHERE user_id = %s",
                 (TEST_USER_ID,),
             )
 
+            # Then delete only the test user.
             cursor.execute(
                 "DELETE FROM users WHERE id = %s",
                 (TEST_USER_ID,),
             )
 
-            cursor.execute(
-                "DELETE FROM roles WHERE id = %s",
-                (TEST_ROLE_ID,),
-            )
-
-            # Do NOT delete TEST_TENANT_ID.
-            # tenant_a is shared by existing RAG documents and tests.
+            # Keep the shared employee role and tenant_a.
 
         conn.commit()
 
     finally:
         conn.close()
+
 
 
 def test_real_query_pipeline():

@@ -59,6 +59,7 @@ def retrieve_documents(
         query=question_embedding.tolist(),
         query_filter=query_filter,
         limit=limit,
+        score_threshold=0.4,
     )
 
     authorized_results = []
@@ -105,6 +106,9 @@ def answer_question(
         tenant_id=tenant_id,
         user_roles=user_roles,
     )
+
+    if not results:
+        return "I couldn't find relevant information you are authorized to access."
 
     retrieved_texts = []
 

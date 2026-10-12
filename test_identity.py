@@ -26,10 +26,7 @@ def test_create_identity_records():
                 "DELETE FROM users WHERE id = %s",
                 (user_id,),
             )
-            cursor.execute(
-                "DELETE FROM roles WHERE id = %s",
-                (role_id,),
-            )
+           
             cursor.execute(
                 "DELETE FROM tenants WHERE id = %s",
                 (tenant_id,),
@@ -43,10 +40,22 @@ def test_create_identity_records():
         name="Test Identity Tenant",
     )
 
-    create_role(
-        role_id=role_id,
-        name="test_identity_role",
-    )
+    conn = get_connection()
+
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "SELECT id FROM roles WHERE name = %s",
+                ("employee",),
+            )
+            role_row = cursor.fetchone()
+
+        if role_row is None:
+            raise RuntimeError("The employee role does not exist.")
+
+        role_id = role_row[0]
+    finally:
+        conn.close()
 
     create_user(
         user_id=user_id,
@@ -95,10 +104,7 @@ def test_create_identity_records():
                 "DELETE FROM users WHERE id = %s",
                 (user_id,),
             )
-            cursor.execute(
-                "DELETE FROM roles WHERE id = %s",
-                (role_id,),
-            )
+            
             cursor.execute(
                 "DELETE FROM tenants WHERE id = %s",
                 (tenant_id,),
@@ -126,10 +132,7 @@ def test_assign_role_and_get_user():
                 "DELETE FROM users WHERE id = %s",
                 (user_id,),
             )
-            cursor.execute(
-                "DELETE FROM roles WHERE id = %s",
-                (role_id,),
-            )
+            
             cursor.execute(
                 "DELETE FROM tenants WHERE id = %s",
                 (tenant_id,),
@@ -143,10 +146,22 @@ def test_assign_role_and_get_user():
         name="Test Lookup Tenant",
     )
 
-    create_role(
-        role_id=role_id,
-        name="employee",
-    )
+    conn = get_connection()
+
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(
+                "SELECT id FROM roles WHERE name = %s",
+                ("employee",),
+            )
+            role_row = cursor.fetchone()
+
+        if role_row is None:
+            raise RuntimeError("The employee role does not exist.")
+
+        role_id = role_row[0]
+    finally:
+        conn.close()
 
     create_user(
         user_id=user_id,
@@ -191,10 +206,7 @@ def test_assign_role_and_get_user():
                 "DELETE FROM users WHERE id = %s",
                 (user_id,),
             )
-            cursor.execute(
-                "DELETE FROM roles WHERE id = %s",
-                (role_id,),
-            )
+           
             cursor.execute(
                 "DELETE FROM tenants WHERE id = %s",
                 (tenant_id,),
