@@ -1,5 +1,5 @@
 from src.rag.pipeline import answer_question, retrieve_documents
-
+from unittest.mock import patch
 
 def test_answer_question():
     question = "How often should I change my password?"
@@ -66,3 +66,33 @@ def test_role_restricted_document_is_not_retrieved():
     ]
 
     assert "policy_3" not in retrieved_document_ids
+
+
+def test_irrelevant_authorized_context_returns_safe_fallback():
+    class FakeResult:
+        payload = {
+            "document_id": "policy_5",
+            "tenant_id": "tenant_b",
+            "allowed_roles": ["employee"],
+            "text": "Employees are entitled to 20 days of annual leave.",
+        }
+
+    question = "On what day do employees receive their salary?"
+
+    with patch(
+        "src.rag.pipeline.retrieve_documents",
+        return_value=[FakeResult()],
+    ), patch(
+        "src.rag.pipeline.generate_answer",
+    ) as mock_generate:
+        answer = answer_question(
+            question,
+            user_id="carol_test",
+            tenant_id="tenant_b",
+            user_roles=["employee"],
+        )
+
+    assert answer == (
+        "I couldn't find relevant information you are authorized to access."
+    )
+    mock_generate.assert_not_called()

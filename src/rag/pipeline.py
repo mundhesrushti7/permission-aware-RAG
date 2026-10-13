@@ -8,8 +8,7 @@ from qdrant_client.models import (
 from src.audit.audit_logger import log_retrieval
 from src.auth.acl import is_document_allowed
 from src.embeddings.embedder import embed_texts
-from src.generation.generator import generate_answer
-
+from src.generation.generator import generate_answer, is_context_relevant
 
 client = QdrantClient(
     url="http://localhost:6333"
@@ -118,6 +117,9 @@ def answer_question(
         )
 
     context = "\n\n".join(retrieved_texts)
+
+    if not is_context_relevant(question, context):
+        return "I couldn't find relevant information you are authorized to access."
 
     prompt = f"""
     Context:

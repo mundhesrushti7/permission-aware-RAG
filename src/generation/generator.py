@@ -28,3 +28,29 @@ def generate_answer(prompt: str) -> str:
     )
 
     return answer
+
+
+def is_context_relevant(question: str, context: str) -> bool:
+    """
+    Check whether the context directly answers the question.
+    Fail safely if the model gives an unexpected response.
+    """
+
+    prompt = f"""
+    Determine whether the context contains information that directly
+    answers the question.
+
+    Reply with only yes or no.
+
+    Question:
+    {question}
+
+    Context:
+    {context}
+
+    Does the context directly answer the question?
+    """
+
+    result = generate_answer(prompt).strip().lower()
+
+    return result == "yes"
