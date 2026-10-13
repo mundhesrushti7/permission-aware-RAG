@@ -101,3 +101,46 @@ def test_permission_revoke_blocks_user_at_retrieval_layer():
             payload=original_payload,
             points=[3],
         )
+
+
+
+from unittest.mock import MagicMock, patch
+
+import pytest
+
+from src.auth import permissions
+
+
+def test_audit_failure_occurs_after_permission_update():
+    fake_record = MagicMock()
+    fake_record.id = 9999
+    fake_record.payload = {
+        "document_id": "audit_failure_test",
+        "tenant_id": "tenant_a",
+        "allowed_users": ["alice"],
+        "allowed_roles": [],
+    }
+
+    with (
+        patch.object(permissions.client, "scroll",
+                     return_value=([fake_record], None)),
+        patch.object(permissions.client, "set_payload") as set_payload,
+        patch.object(
+            permissions,
+            "log_permission_change",
+            side_effect=RuntimeError("Simulated audit database failure"),
+        ),
+    ):
+        with pytest.raises(
+            RuntimeError, match="Simulated audit database failure"
+        ):
+            permissions.revoke_user_access(
+                document_id="audit_failure_test",
+                target_user_id="alice",
+                actor_user_id="admin_1",
+                actor_tenant_id="tenant_a",
+                actor_roles=["admin"],
+            )
+
+    set_payload.assert_called_once()
+    assert set_payload.call_args.kwargs["payload"]["allowed_users"] == []
